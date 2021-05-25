@@ -1,0 +1,20 @@
+version: "3.5"
+services:
+  php:
+    build:
+      context: docker/php
+      args:
+        - UID=${uid:-1000}
+        - GID=${gid:-1000}
+    container_name: mangadex-api-php
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+      - ./docker/php/php-ini-overrides.ini:/usr/local/etc/php/conf.d/99-overrides.ini
+
+  generator:
+    image: openapitools/openapi-generator-cli
+    container_name: mangadex-api-generator
+    command: generate -i https://api.mangadex.org/api.yaml -g php -o /local/out/php
+    volumes:
+      - ./:/local

@@ -1,0 +1,14 @@
+#!/usr/bin/env php
+<?php
+
+use MangadexSDK\Api\AccountApi;
+use MangadexSDK\Api\AuthApi;
+
+require_once __DIR__."/../vendor/autoload.php";
+
+$accountApi = new AccountApi();
+$auth = new AuthApi();
+
+$accountApi->postAccountCreate(
+
+);

@@ -1,0 +1,26 @@
+{
+    "name": "mapsred/mangadex-api",
+    "description": "MangaDex PHP SDK",
+    "license": "Apache-2.0",
+    "authors": [{
+        "name": "Maps_red"
+    }],
+    "require": {
+        "php": ">=7.2",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "guzzlehttp/guzzle": "^6.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.0 || ^9.0",
+        "friendsofphp/php-cs-fixer": "^2.12",
+        "rector/rector": "^0.11.5"
+    },
+    "autoload": {
+        "psr-4": { "MangadexSDK\\" : "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "MangadexSDK\\Test\\" : "test/" }
+    }
+}
