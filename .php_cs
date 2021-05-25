@@ -21,8 +21,6 @@ return (new PhpCsFixer\Config())
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
-        ->exclude('test')
-        ->exclude('tests')
         ->exclude('out')
         ->in(__DIR__)
     );

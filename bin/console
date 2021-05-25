@@ -1,14 +1,11 @@
 #!/usr/bin/env php
 <?php
 
-use MangadexSDK\Api\AccountApi;
-use MangadexSDK\Api\AuthApi;
+use Mapsred\MangadexSDK\Builder\CodeCleaner;
 
 require_once __DIR__."/../vendor/autoload.php";
 
-$accountApi = new AccountApi();
-$auth = new AuthApi();
-
-$accountApi->postAccountCreate(
-
-);
+if ('--cleaner' === $argv[1] ?? null) {
+    $cleaner = new CodeCleaner();
+    $cleaner->execute();
+}

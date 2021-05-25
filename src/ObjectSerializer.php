@@ -1,28 +1,9 @@
 <?php declare(strict_types=1);
-/**
- * ObjectSerializer
- *
- * PHP version 7.2
- *
- * @category Class
- * @package  MangadexSDK
- * @author   OpenAPI Generator team
- * @link     https://openapi-generator.tech
- */
 
-namespace MangadexSDK;
+namespace Mapsred\MangadexSDK;
 
-use MangadexSDK\Model\ModelInterface;
-use Psr\Http\Message\StreamInterface;
+use Mapsred\MangadexSDK\Model\ModelInterface;
 
-/**
- * ObjectSerializer Class Doc Comment
- *
- * @category Class
- * @package  MangadexSDK
- * @author   OpenAPI Generator team
- * @link     https://openapi-generator.tech
- */
 class ObjectSerializer
 {
     /** @var string */
@@ -321,7 +302,8 @@ class ObjectSerializer
         }
 
         if ($class === '\SplFileObject') {
-            /** @var StreamInterface $data */
+            /** @var \Psr\Http\Message\StreamInterface $data */
+
             // determine file name
             if (array_key_exists('Content-Disposition', $httpHeaders) &&
                 preg_match('/inline; filename=[\'"]?([^\'"\s]+)[\'"]?$/i', $httpHeaders['Content-Disposition'], $match)) {
@@ -348,7 +330,7 @@ class ObjectSerializer
             // If a discriminator is defined and points to a valid subclass, use it.
             $discriminator = $class::DISCRIMINATOR;
             if (!empty($discriminator) && isset($data->{$discriminator}) && is_string($data->{$discriminator})) {
-                $subclass = '\MangadexSDK\Model\\' . $data->{$discriminator};
+                $subclass = '\Mapsred\MangadexSDK\Model\\' . $data->{$discriminator};
                 if (is_subclass_of($subclass, $class)) {
                     $class = $subclass;
                 }

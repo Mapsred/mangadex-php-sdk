@@ -1,69 +1,37 @@
 <?php declare(strict_types=1);
-/**
- * MangaApi
- * PHP version 7.2
- *
- * @category Class
- * @package  MangadexSDK
- * @author   OpenAPI Generator team
- * @link     https://openapi-generator.tech
- */
 
-/**
- * MangaDex API
- *
- * MangaDex is an ad-free manga reader offering high-quality images!  This document details our API as it is right now. It is in no way a promise to never change it, although we will endeavour to publicly notify any major change.  # Authentication  You can login with the `/auth/login` endpoint. On success, it will return a JWT that remains valid for 15 minutes along with a session token that allows refreshing without re-authenticating for 1 month.  # Rate limits  The API enforces rate-limits to protect our servers against malicious and/or mistaken use. The API keeps track of the requests on an IP-by-IP basis. Hence, if you're on a VPN, proxy or a shared network in general, the requests of other users on this network might affect you.  At first, a **global limit of 5 requests per second per IP address** is in effect.  > This limit is enforced across multiple load-balancers, and thus is not an exact value but rather a lower-bound that we guarantee. The exact value will be somewhere in the range `[5, 5*n]` (with `n` being the number of load-balancers currently active). The exact value within this range will depend on the current traffic patterns we are experiencing.  On top of this, **some endpoints are further restricted** as follows:  | Endpoint                           | Requests per time period    | Time period in minutes | |------------------------------------|--------------------------   |------------------------| | `POST   /account/create`           | 1                           | 60                     | | `GET    /account/activate/{code}`  | 30                          | 60                     | | `POST   /account/activate/resend`  | 5                           | 60                     | | `POST   /account/recover`          | 5                           | 60                     | | `POST   /account/recover/{code}`   | 5                           | 60                     | | `POST   /auth/login`               | 30                          | 60                     | | `POST   /auth/refresh`             | 30                          | 60                     | | `POST   /author`                   | 10                          | 60                     | | `PUT    /author`                   | 10                          | 1                      | | `DELETE /author/{id}`              | 10                          | 10                     | | `POST   /captcha/solve`            | 10                          | 10                     | | `POST   /chapter/{id}/read`        | 300                         | 10                     | | `PUT    /chapter/{id}`             | 10                          | 1                      | | `DELETE /chapter/{id}`             | 10                          | 1                      | | `POST   /manga`                    | 10                          | 60                     | | `PUT    /manga/{id}`               | 10                          | 60                     | | `DELETE /manga/{id}`               | 10                          | 10                     | | `POST   /cover`                    | 10                          | 1                      | | `PUT    /cover/{id}`               | 10                          | 1                      | | `DELETE /cover/{id}`               | 10                          | 10                     | | `POST   /group`                    | 10                          | 60                     | | `PUT    /group/{id}`               | 10                          | 1                      | | `DELETE /group/{id}`               | 10                          | 10                     | | `GET    /at-home/server/{id}`      | 60                          | 1                      |  Calling these endpoints will further provide details via the following headers about your remaining quotas:  | Header                    | Description                                                                 | |---------------------------|-----------------------------------------------------------------------------| | `X-RateLimit-Limit`       | Maximal number of requests this endpoint allows per its time period         | | `X-RateLimit-Remaining`   | Remaining number of requests within your quota for the current time period  | | `X-RateLimit-Retry-After` | Timestamp of the end of the current time period, as UNIX timestamp          |  # Captchas  Some endpoints may require captchas to proceed, in order to slow down automated malicious traffic. Legitimate users might also be affected, based on the frequency of write requests or due certain endpoints being particularly sensitive to malicious use, such as user signup.  Once an endpoint decides that a captcha needs to be solved, a 403 Forbidden response will be returned, with the error code `captcha_required_exception`. The sitekey needed for recaptcha to function is provided in both the `X-Captcha-Sitekey` header field, as well as in the error context, specified as `siteKey` parameter.  The captcha result of the client can either be passed into the repeated original request with the `X-Captcha-Result` header or alternatively to the `POST /captcha/solve` endpoint. The time a solved captcha is remembered varies across different endpoints and can also be influenced by individual client behavior.  Authentication is not required for the `POST /captcha/solve` endpoint, captchas are tracked both by client ip and logged in user id. If you are logged in, you want to send the session token along, so you validate the captcha for your client ip and user id at the same time, but it is not required.  # Reading a chapter using the API  ## Retrieving pages from the MangaDex@Home network  A valid [MangaDex@Home network](https://mangadex.network) page URL is in the following format: `{server-specific base url}/{temporary access token}/{quality mode}/{chapter hash}/{filename}`  There are currently 2 quality modes: - `data`: Original upload quality - `data-saver`: Compressed quality  Upon fetching a chapter from the API, you will find 4 fields necessary to compute MangaDex@Home page URLs:  | Field                        | Type     | Description                       | |------------------------------|----------|-----------------------------------| | `.data.id`                   | `string` | API Chapter ID                    | | `.data.attributes.hash`      | `string` | MangaDex@Home Chapter Hash        | | `.data.attributes.data`      | `array`  | data quality mode filenames       | | `.data.attributes.dataSaver` | `array`  | data-saver quality mode filenames |  Example ```json GET /chapter/{id}  {   ...,   \"data\": {     \"id\": \"e46e5118-80ce-4382-a506-f61a24865166\",     ...,     \"attributes\": {       ...,       \"hash\": \"e199c7d73af7a58e8a4d0263f03db660\",       \"data\": [         \"x1-b765e86d5ecbc932cf3f517a8604f6ac6d8a7f379b0277a117dc7c09c53d041e.png\",         ...       ],       \"dataSaver\": [         \"x1-ab2b7c8f30c843aa3a53c29bc8c0e204fba4ab3e75985d761921eb6a52ff6159.jpg\",         ...       ]     }   } } ```  From this point you miss only the base URL to an assigned MangaDex@Home server for your client and chapter. This is retrieved via a `GET` request to `/at-home/server/{ chapter .data.id }`.  Example: ```json GET /at-home/server/e46e5118-80ce-4382-a506-f61a24865166  {   \"baseUrl\": \"https://abcdefg.hijklmn.mangadex.network:12345/some-token\" } ```  The full URL is the constructed as follows ``` { server .baseUrl }/{ quality mode }/{ chapter .data.attributes.hash }/{ chapter .data.attributes.{ quality mode }.[*] }  Examples  data quality: https://abcdefg.hijklmn.mangadex.network:12345/some-token/data/e199c7d73af7a58e8a4d0263f03db660/x1-b765e86d5ecbc932cf3f517a8604f6ac6d8a7f379b0277a117dc7c09c53d041e.png        base url: https://abcdefg.hijklmn.mangadex.network:12345/some-token   quality mode: data   chapter hash: e199c7d73af7a58e8a4d0263f03db660       filename: x1-b765e86d5ecbc932cf3f517a8604f6ac6d8a7f379b0277a117dc7c09c53d041e.png   data-saver quality: https://abcdefg.hijklmn.mangadex.network:12345/some-token/data-saver/e199c7d73af7a58e8a4d0263f03db660/x1-ab2b7c8f30c843aa3a53c29bc8c0e204fba4ab3e75985d761921eb6a52ff6159.jpg        base url: https://abcdefg.hijklmn.mangadex.network:12345/some-token   quality mode: data-saver   chapter hash: e199c7d73af7a58e8a4d0263f03db660       filename: x1-ab2b7c8f30c843aa3a53c29bc8c0e204fba4ab3e75985d761921eb6a52ff6159.jpg ```  If the server you have been assigned fails to serve images, you are allowed to call the `/at-home/server/{ chapter id }` endpoint again to get another server.  Whether successful or not, **please do report the result you encountered as detailed below**. This is so we can pull the faulty server out of the network.  ## Report  In order to keep track of the health of the servers in the network and to improve the quality of service and reliability, we ask that you call the MangaDex@Home report endpoint after each image you retrieve, whether successfully or not.  It is a `POST` request against `https://api.mangadex.network/report` and expects the following payload with our example above:  | Field                       | Type       | Description                                                                         | |-----------------------------|------------|-------------------------------------------------------------------------------------| | `url`                       | `string`   | The full URL of the image                                                           | | `success`                   | `boolean`  | Whether the image was successfully retrieved                                        | | `cached `                   | `boolean`  | `true` iff the server returned an `X-Cache` header with a value starting with `HIT` | | `bytes`                     | `number`   | The size in bytes of the retrieved image                                            | | `duration`                  | `number`   | The time in miliseconds that the complete retrieval (not TTFB) of this image took   |  Examples herafter.  **Success:** ```json POST https://api.mangadex.network/report Content-Type: application/json  {   \"url\": \"https://abcdefg.hijklmn.mangadex.network:12345/some-token/data/e199c7d73af7a58e8a4d0263f03db660/x1-b765e86d5ecbc932cf3f517a8604f6ac6d8a7f379b0277a117dc7c09c53d041e.png\",   \"success\": true,   \"bytes\": 727040,   \"duration\": 235,   \"cached\": true } ```  **Failure:** ```json POST https://api.mangadex.network/report Content-Type: application/json  {  \"url\": \"https://abcdefg.hijklmn.mangadex.network:12345/some-token/data/e199c7d73af7a58e8a4d0263f03db660/x1-b765e86d5ecbc932cf3f517a8604f6ac6d8a7f379b0277a117dc7c09c53d041e.png\",  \"success\": false,  \"bytes\": 25,  \"duration\": 235,  \"cached\": false } ```  While not strictly necessary, this helps us monitor the network's healthiness, and we appreciate your cooperation towards this goal. If no one reports successes and failures, we have no way to know that a given server is slow/broken, which eventually results in broken image retrieval for everyone.  # Static data  ## Manga publication demographic  | Value            | Description               | |------------------|---------------------------| | shounen          | Manga is a Shounen        | | shoujo           | Manga is a Shoujo         | | josei            | Manga is a Josei          | | seinen           | Manga is a Seinen         |  ## Manga status  | Value            | Description               | |------------------|---------------------------| | ongoing          | Manga is still going on   | | completed        | Manga is completed        | | hiatus           | Manga is paused           | | cancelled        | Manga has been cancelled  |  ## Manga reading status  | Value            | |------------------| | reading          | | on_hold          | | plan\\_to\\_read   | | dropped          | | re\\_reading      | | completed        |  ## Manga content rating  | Value            | Description               | |------------------|---------------------------| | safe             | Safe content              | | suggestive       | Suggestive content        | | erotica          | Erotica content           | | pornographic     | Pornographic content      |  ## CustomList visibility  | Value            | Description               | |------------------|---------------------------| | public           | CustomList is public      | | private          | CustomList is private     |  ## Relationship types  | Value            | Description                    | |------------------|--------------------------------| | manga            | Manga resource                 | | chapter          | Chapter resource               | | cover_art        | A Cover Art for a manga `*`    | | author           | Author resource                | | artist           | Author resource (drawers only) | | scanlation_group | ScanlationGroup resource       | | tag              | Tag resource                   | | user             | User resource                  | | custom_list      | CustomList resource            |  `*` Note, that on manga resources you get only one cover_art resource relation marking the primary cover if there are more than one. By default this will be the latest volume's cover art. If you like to see all the covers for a given manga, use the cover search endpoint for your mangaId and select the one you wish to display.  ## Manga links data  In Manga attributes you have the `links` field that is a JSON object with some strange keys, here is how to decode this object:  | Key   | Related site  | URL                                                                                           | URL details                                                    | |-------|---------------|-----------------------------------------------------------------------------------------------|----------------------------------------------------------------| | al    | anilist       | https://anilist.co/manga/`{id}`                                                               | Stored as id                                                   | | ap    | animeplanet   | https://www.anime-planet.com/manga/`{slug}`                                                   | Stored as slug                                                 | | bw    | bookwalker.jp | https://bookwalker.jp/`{slug}`                                                                | Stored has \"series/{id}\"                                       | | mu    | mangaupdates  | https://www.mangaupdates.com/series.html?id=`{id}`                                            | Stored has id                                                  | | nu    | novelupdates  | https://www.novelupdates.com/series/`{slug}`                                                  | Stored has slug                                                | | kt    | kitsu.io      | https://kitsu.io/api/edge/manga/`{id}` or https://kitsu.io/api/edge/manga?filter[slug]={slug} | If integer, use id version of the URL, otherwise use slug one  | | amz   | amazon        | N/A                                                                                           | Stored as full URL                                             | | ebj   | ebookjapan    | N/A                                                                                           | Stored as full URL                                             | | mal   | myanimelist   | https://myanimelist.net/manga/{id}                                                            | Store as id                                                    | | raw   | N/A           | N/A                                                                                           | Stored as full URL, untranslated stuff URL (original language) | | engtl | N/A           | N/A                                                                                           | Stored as full URL, official english licenced URL              |
- *
- * The version of the OpenAPI document: 5.0.13
- * Contact: mangadexstaff@gmail.com
- * Generated by: https://openapi-generator.tech
- * OpenAPI Generator version: 5.2.0-SNAPSHOT
- */
-
-/**
- * NOTE: This class is auto generated by OpenAPI Generator (https://openapi-generator.tech).
- * https://openapi-generator.tech
- * Do not edit the class manually.
- */
-
-namespace MangadexSDK\Api;
+namespace Mapsred\MangadexSDK\Api;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
 use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
-use function GuzzleHttp\Psr7\build_query;
 use GuzzleHttp\Psr7\MultipartStream;
+use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
-use MangadexSDK\ApiException;
-use MangadexSDK\Configuration;
-use MangadexSDK\HeaderSelector;
-use MangadexSDK\Model\ChapterList;
-use MangadexSDK\Model\ErrorResponse;
-use MangadexSDK\Model\InlineResponse200;
-use MangadexSDK\Model\InlineResponse2001;
-use MangadexSDK\Model\InlineResponse2004;
-use MangadexSDK\Model\InlineResponse2005;
-use MangadexSDK\Model\MangaCreate;
-use MangadexSDK\Model\MangaEdit;
-use MangadexSDK\Model\MangaList;
-use MangadexSDK\Model\MangaResponse;
-use MangadexSDK\Model\ModelInterface;
-use MangadexSDK\Model\Response;
-use MangadexSDK\Model\TagResponse;
-use MangadexSDK\Model\UpdateMangaStatus;
-use MangadexSDK\ObjectSerializer;
+use InvalidArgumentException;
+use Mapsred\MangadexSDK\ApiException;
+use Mapsred\MangadexSDK\Configuration;
+use Mapsred\MangadexSDK\HeaderSelector;
+use Mapsred\MangadexSDK\Model\ChapterList;
+use Mapsred\MangadexSDK\Model\ErrorResponse;
+use Mapsred\MangadexSDK\Model\InlineResponse200;
+use Mapsred\MangadexSDK\Model\InlineResponse2001;
+use Mapsred\MangadexSDK\Model\InlineResponse2004;
+use Mapsred\MangadexSDK\Model\InlineResponse2005;
+use Mapsred\MangadexSDK\Model\MangaCreate;
+use Mapsred\MangadexSDK\Model\MangaEdit;
+use Mapsred\MangadexSDK\Model\MangaList;
+use Mapsred\MangadexSDK\Model\MangaResponse;
+use Mapsred\MangadexSDK\Model\ModelInterface;
+use Mapsred\MangadexSDK\Model\Response;
+use Mapsred\MangadexSDK\Model\TagResponse;
+use Mapsred\MangadexSDK\Model\UpdateMangaStatus;
+use Mapsred\MangadexSDK\ObjectSerializer;
+use RuntimeException;
 
-/**
- * MangaApi Class Doc Comment
- *
- * @category Class
- * @package  MangadexSDK
- * @author   OpenAPI Generator team
- * @link     https://openapi-generator.tech
- */
 final class MangaApi
 {
     /**
@@ -202,7 +170,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse|ErrorResponse
      */
     public function deleteMangaId(string $id): ModelInterface
@@ -219,8 +187,8 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function deleteMangaIdWithHttpInfo(string $id)
     {
@@ -256,33 +224,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 403:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -300,7 +268,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -309,7 +277,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -326,7 +294,7 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdAsync(string $id): PromiseInterface
     {
@@ -346,11 +314,11 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->deleteMangaIdRequest($id);
 
         return $this->client
@@ -392,13 +360,13 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling deleteMangaId'
             );
         }
@@ -454,7 +422,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -474,7 +442,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::DELETE,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -491,7 +459,7 @@ final class MangaApi
      * @param  string $id id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse
      */
     public function deleteMangaIdFollow(string $id): ModelInterface
@@ -508,8 +476,8 @@ final class MangaApi
      * @param  string $id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function deleteMangaIdFollowWithHttpInfo(string $id)
     {
@@ -545,32 +513,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -588,7 +556,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -596,7 +564,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -613,7 +581,7 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdFollowAsync(string $id): PromiseInterface
     {
@@ -633,11 +601,11 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdFollowAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->deleteMangaIdFollowRequest($id);
 
         return $this->client
@@ -679,13 +647,13 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdFollowRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling deleteMangaIdFollow'
             );
         }
@@ -741,7 +709,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -761,7 +729,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::DELETE,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -779,7 +747,7 @@ final class MangaApi
      * @param  string $list_id CustomList ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse|ErrorResponse
      */
     public function deleteMangaIdListListId(string $id, string $list_id): ModelInterface
@@ -797,8 +765,8 @@ final class MangaApi
      * @param  string $list_id CustomList ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function deleteMangaIdListListIdWithHttpInfo(string $id, string $list_id)
     {
@@ -834,33 +802,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 403:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -878,7 +846,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -887,7 +855,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -905,7 +873,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdListListIdAsync(string $id, string $list_id): PromiseInterface
     {
@@ -926,11 +894,11 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdListListIdAsyncWithHttpInfo(string $id, string $list_id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->deleteMangaIdListListIdRequest($id, $list_id);
 
         return $this->client
@@ -973,19 +941,19 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function deleteMangaIdListListIdRequest(string $id, string $list_id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling deleteMangaIdListListId'
             );
         }
         // verify the required parameter 'list_id' is set
         if ($list_id === null || (is_array($list_id) && count($list_id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $list_id when calling deleteMangaIdListListId'
             );
         }
@@ -1049,7 +1017,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -1069,7 +1037,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::DELETE,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -1086,7 +1054,7 @@ final class MangaApi
      * @param  string $id id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkers(string $id): InlineResponse2001
     {
@@ -1102,8 +1070,8 @@ final class MangaApi
      * @param  string $id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\InlineResponse2001, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\InlineResponse2001, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaChapterReadmarkersWithHttpInfo(string $id)
     {
@@ -1138,19 +1106,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\InlineResponse2001' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\InlineResponse2001' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\InlineResponse2001', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\InlineResponse2001', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\InlineResponse2001';
+            $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2001';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -1167,7 +1135,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\InlineResponse2001',
+                    '\Mapsred\MangadexSDK\Model\InlineResponse2001',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -1183,7 +1151,7 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkersAsync(string $id): PromiseInterface
     {
@@ -1203,11 +1171,11 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkersAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\InlineResponse2001';
+        $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2001';
         $request = $this->getMangaChapterReadmarkersRequest($id);
 
         return $this->client
@@ -1249,13 +1217,13 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkersRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling getMangaChapterReadmarkers'
             );
         }
@@ -1311,7 +1279,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -1331,7 +1299,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -1348,7 +1316,7 @@ final class MangaApi
      * @param  string[] $ids Manga ids (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkers2(array $ids): InlineResponse2001
     {
@@ -1364,8 +1332,8 @@ final class MangaApi
      * @param  string[] $ids Manga ids (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\InlineResponse2001, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\InlineResponse2001, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaChapterReadmarkers2WithHttpInfo(array $ids)
     {
@@ -1400,19 +1368,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\InlineResponse2001' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\InlineResponse2001' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\InlineResponse2001', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\InlineResponse2001', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\InlineResponse2001';
+            $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2001';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -1429,7 +1397,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\InlineResponse2001',
+                    '\Mapsred\MangadexSDK\Model\InlineResponse2001',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -1445,7 +1413,7 @@ final class MangaApi
      *
      * @param  string[] $ids Manga ids (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkers2Async(array $ids): PromiseInterface
     {
@@ -1465,11 +1433,11 @@ final class MangaApi
      *
      * @param  string[] $ids Manga ids (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkers2AsyncWithHttpInfo(array $ids): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\InlineResponse2001';
+        $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2001';
         $request = $this->getMangaChapterReadmarkers2Request($ids);
 
         return $this->client
@@ -1511,13 +1479,13 @@ final class MangaApi
      *
      * @param  string[] $ids Manga ids (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaChapterReadmarkers2Request(array $ids): Request
     {
         // verify the required parameter 'ids' is set
         if ($ids === null || (is_array($ids) && count($ids) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $ids when calling getMangaChapterReadmarkers2'
             );
         }
@@ -1576,7 +1544,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -1596,7 +1564,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -1613,7 +1581,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return MangaResponse|ErrorResponse
      */
     public function getMangaId(string $id): ModelInterface
@@ -1630,8 +1598,8 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaIdWithHttpInfo(string $id)
     {
@@ -1667,32 +1635,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 403:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaResponse';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -1710,7 +1678,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\MangaResponse',
+                        '\Mapsred\MangadexSDK\Model\MangaResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -1718,7 +1686,7 @@ final class MangaApi
                 case 403:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -1735,7 +1703,7 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdAsync(string $id): PromiseInterface
     {
@@ -1755,11 +1723,11 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaResponse';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
         $request = $this->getMangaIdRequest($id);
 
         return $this->client
@@ -1801,13 +1769,13 @@ final class MangaApi
      *
      * @param  string $id Manga ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling getMangaId'
             );
         }
@@ -1863,7 +1831,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -1879,7 +1847,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -1903,7 +1871,7 @@ final class MangaApi
      * @param  Order6 $order order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return ChapterList|ErrorResponse
      */
     public function getMangaIdFeed(string $id, int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): ModelInterface
@@ -1927,8 +1895,8 @@ final class MangaApi
      * @param  Order6 $order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\ChapterList|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\ChapterList|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaIdFeedWithHttpInfo(string $id, int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null)
     {
@@ -1964,32 +1932,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\ChapterList' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ChapterList' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ChapterList', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ChapterList', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\ChapterList';
+            $returnType = '\Mapsred\MangadexSDK\Model\ChapterList';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2007,7 +1975,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ChapterList',
+                        '\Mapsred\MangadexSDK\Model\ChapterList',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2015,7 +1983,7 @@ final class MangaApi
                 case 400:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2039,7 +2007,7 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order6 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdFeedAsync(string $id, int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): PromiseInterface
     {
@@ -2066,11 +2034,11 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order6 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdFeedAsyncWithHttpInfo(string $id, int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\ChapterList';
+        $returnType = '\Mapsred\MangadexSDK\Model\ChapterList';
         $request = $this->getMangaIdFeedRequest($id, $limit, $offset, $translated_language, $created_at_since, $updated_at_since, $publish_at_since, $order);
 
         return $this->client
@@ -2119,37 +2087,37 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order6 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdFeedRequest(string $id, int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling getMangaIdFeed'
             );
         }
         if ($limit !== null && $limit > 500) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getMangaIdFeed, must be smaller than or equal to 500.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getMangaIdFeed, must be smaller than or equal to 500.');
         }
         if ($limit !== null && $limit < 1) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getMangaIdFeed, must be bigger than or equal to 1.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getMangaIdFeed, must be bigger than or equal to 1.');
         }
 
         if ($offset !== null && $offset < 0) {
-            throw new \InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getMangaIdFeed, must be bigger than or equal to 0.');
+            throw new InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getMangaIdFeed, must be bigger than or equal to 0.');
         }
 
         if ($created_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $created_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
         if ($updated_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $updated_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
         if ($publish_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $publish_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"publish_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"publish_at_since\" when calling MangaApi.getMangaIdFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
 
@@ -2281,7 +2249,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -2297,7 +2265,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -2314,7 +2282,7 @@ final class MangaApi
      * @param  string $id id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return InlineResponse2005|ErrorResponse|ErrorResponse
      */
     public function getMangaIdStatus(string $id): ModelInterface
@@ -2331,8 +2299,8 @@ final class MangaApi
      * @param  string $id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\InlineResponse2005|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\InlineResponse2005|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaIdStatusWithHttpInfo(string $id)
     {
@@ -2368,33 +2336,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\InlineResponse2005' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\InlineResponse2005' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\InlineResponse2005', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\InlineResponse2005', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 403:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\InlineResponse2005';
+            $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2005';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2412,7 +2380,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\InlineResponse2005',
+                        '\Mapsred\MangadexSDK\Model\InlineResponse2005',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2421,7 +2389,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -2438,7 +2406,7 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdStatusAsync(string $id): PromiseInterface
     {
@@ -2458,11 +2426,11 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdStatusAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\InlineResponse2005';
+        $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2005';
         $request = $this->getMangaIdStatusRequest($id);
 
         return $this->client
@@ -2504,13 +2472,13 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaIdStatusRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling getMangaIdStatus'
             );
         }
@@ -2566,7 +2534,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -2586,7 +2554,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -2602,7 +2570,7 @@ final class MangaApi
      *
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaRandom(): MangaResponse
     {
@@ -2617,8 +2585,8 @@ final class MangaApi
      *
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaRandomWithHttpInfo()
     {
@@ -2653,19 +2621,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaResponse', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaResponse', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaResponse';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2682,7 +2650,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\MangaResponse',
+                    '\Mapsred\MangadexSDK\Model\MangaResponse',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -2697,7 +2665,7 @@ final class MangaApi
      * Get a random Manga
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaRandomAsync(): PromiseInterface
     {
@@ -2716,11 +2684,11 @@ final class MangaApi
      * Get a random Manga
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaRandomAsyncWithHttpInfo(): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaResponse';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
         $request = $this->getMangaRandomRequest();
 
         return $this->client
@@ -2761,7 +2729,7 @@ final class MangaApi
      * Create request for operation 'getMangaRandom'
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaRandomRequest(): Request
     {
@@ -2809,7 +2777,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -2825,7 +2793,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -2842,7 +2810,7 @@ final class MangaApi
      * @param  string $status Used to filter the list by given status (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaStatus(string $status = null): InlineResponse2004
     {
@@ -2858,8 +2826,8 @@ final class MangaApi
      * @param  string $status Used to filter the list by given status (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\InlineResponse2004, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\InlineResponse2004, HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaStatusWithHttpInfo(string $status = null)
     {
@@ -2894,19 +2862,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\InlineResponse2004' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\InlineResponse2004' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\InlineResponse2004', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\InlineResponse2004', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\InlineResponse2004';
+            $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2004';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -2923,7 +2891,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\InlineResponse2004',
+                    '\Mapsred\MangadexSDK\Model\InlineResponse2004',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -2939,7 +2907,7 @@ final class MangaApi
      *
      * @param  string $status Used to filter the list by given status (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaStatusAsync(string $status = null): PromiseInterface
     {
@@ -2959,11 +2927,11 @@ final class MangaApi
      *
      * @param  string $status Used to filter the list by given status (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaStatusAsyncWithHttpInfo(string $status = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\InlineResponse2004';
+        $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse2004';
         $request = $this->getMangaStatusRequest($status);
 
         return $this->client
@@ -3005,7 +2973,7 @@ final class MangaApi
      *
      * @param  string $status Used to filter the list by given status (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaStatusRequest(string $status = null): Request
     {
@@ -3064,7 +3032,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -3084,7 +3052,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -3100,7 +3068,7 @@ final class MangaApi
      *
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return TagResponse[]
      */
     public function getMangaTag(): array
@@ -3116,8 +3084,8 @@ final class MangaApi
      *
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\TagResponse[], HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\TagResponse[], HTTP status code, HTTP response headers (array of strings)
      */
     public function getMangaTagWithHttpInfo()
     {
@@ -3152,19 +3120,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\TagResponse[]' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\TagResponse[]' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\TagResponse[]', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\TagResponse[]', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\TagResponse[]';
+            $returnType = '\Mapsred\MangadexSDK\Model\TagResponse[]';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -3181,7 +3149,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\TagResponse[]',
+                    '\Mapsred\MangadexSDK\Model\TagResponse[]',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -3196,7 +3164,7 @@ final class MangaApi
      * Tag list
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaTagAsync(): PromiseInterface
     {
@@ -3215,11 +3183,11 @@ final class MangaApi
      * Tag list
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaTagAsyncWithHttpInfo(): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\TagResponse[]';
+        $returnType = '\Mapsred\MangadexSDK\Model\TagResponse[]';
         $request = $this->getMangaTagRequest();
 
         return $this->client
@@ -3260,7 +3228,7 @@ final class MangaApi
      * Create request for operation 'getMangaTag'
      *
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getMangaTagRequest(): Request
     {
@@ -3308,7 +3276,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -3324,7 +3292,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -3358,7 +3326,7 @@ final class MangaApi
      * @param  Order $order order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return MangaList|ErrorResponse
      */
     public function getSearchManga(int $limit = 10, int $offset = null, string $title = null, array $authors = null, array $artists = null, int $year = null, array $included_tags = null, string $included_tags_mode = 'AND', array $excluded_tags = null, string $excluded_tags_mode = 'OR', array $status = null, array $original_language = null, array $publication_demographic = null, array $ids = null, array $content_rating = null, string $created_at_since = null, string $updated_at_since = null, $order = null): ModelInterface
@@ -3392,8 +3360,8 @@ final class MangaApi
      * @param  Order $order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaList|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaList|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getSearchMangaWithHttpInfo(int $limit = 10, int $offset = null, string $title = null, array $authors = null, array $artists = null, int $year = null, array $included_tags = null, string $included_tags_mode = 'AND', array $excluded_tags = null, string $excluded_tags_mode = 'OR', array $status = null, array $original_language = null, array $publication_demographic = null, array $ids = null, array $content_rating = null, string $created_at_since = null, string $updated_at_since = null, $order = null)
     {
@@ -3429,32 +3397,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\MangaList' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\MangaList' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaList', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaList', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaList';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaList';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -3472,7 +3440,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\MangaList',
+                        '\Mapsred\MangadexSDK\Model\MangaList',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -3480,7 +3448,7 @@ final class MangaApi
                 case 400:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -3514,7 +3482,7 @@ final class MangaApi
      * @param  string $updated_at_since (optional)
      * @param  Order $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getSearchMangaAsync(int $limit = 10, int $offset = null, string $title = null, array $authors = null, array $artists = null, int $year = null, array $included_tags = null, string $included_tags_mode = 'AND', array $excluded_tags = null, string $excluded_tags_mode = 'OR', array $status = null, array $original_language = null, array $publication_demographic = null, array $ids = null, array $content_rating = null, string $created_at_since = null, string $updated_at_since = null, $order = null): PromiseInterface
     {
@@ -3551,11 +3519,11 @@ final class MangaApi
      * @param  string $updated_at_since (optional)
      * @param  Order $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getSearchMangaAsyncWithHttpInfo(int $limit = 10, int $offset = null, string $title = null, array $authors = null, array $artists = null, int $year = null, array $included_tags = null, string $included_tags_mode = 'AND', array $excluded_tags = null, string $excluded_tags_mode = 'OR', array $status = null, array $original_language = null, array $publication_demographic = null, array $ids = null, array $content_rating = null, string $created_at_since = null, string $updated_at_since = null, $order = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaList';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaList';
         $request = $this->getSearchMangaRequest($limit, $offset, $title, $authors, $artists, $year, $included_tags, $included_tags_mode, $excluded_tags, $excluded_tags_mode, $status, $original_language, $publication_demographic, $ids, $content_rating, $created_at_since, $updated_at_since, $order);
 
         return $this->client
@@ -3614,27 +3582,27 @@ final class MangaApi
      * @param  string $updated_at_since (optional)
      * @param  Order $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getSearchMangaRequest(int $limit = 10, int $offset = null, string $title = null, array $authors = null, array $artists = null, int $year = null, array $included_tags = null, string $included_tags_mode = 'AND', array $excluded_tags = null, string $excluded_tags_mode = 'OR', array $status = null, array $original_language = null, array $publication_demographic = null, array $ids = null, array $content_rating = null, string $created_at_since = null, string $updated_at_since = null, $order = null): Request
     {
         if ($limit !== null && $limit > 100) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getSearchManga, must be smaller than or equal to 100.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getSearchManga, must be smaller than or equal to 100.');
         }
         if ($limit !== null && $limit < 1) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getSearchManga, must be bigger than or equal to 1.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getSearchManga, must be bigger than or equal to 1.');
         }
 
         if ($offset !== null && $offset < 0) {
-            throw new \InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getSearchManga, must be bigger than or equal to 0.');
+            throw new InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getSearchManga, must be bigger than or equal to 0.');
         }
 
         if ($created_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $created_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getSearchManga, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getSearchManga, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
         if ($updated_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $updated_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getSearchManga, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getSearchManga, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
 
@@ -3879,7 +3847,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -3895,7 +3863,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -3913,7 +3881,7 @@ final class MangaApi
      * @param  int $offset offset (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsManga(int $limit = 10, int $offset = null): MangaList
     {
@@ -3930,8 +3898,8 @@ final class MangaApi
      * @param  int $offset (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaList, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaList, HTTP status code, HTTP response headers (array of strings)
      */
     public function getUserFollowsMangaWithHttpInfo(int $limit = 10, int $offset = null)
     {
@@ -3966,19 +3934,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\MangaList' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\MangaList' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaList', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaList', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaList';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaList';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -3995,7 +3963,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\MangaList',
+                    '\Mapsred\MangadexSDK\Model\MangaList',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -4012,7 +3980,7 @@ final class MangaApi
      * @param  int $limit (optional, default to 10)
      * @param  int $offset (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaAsync(int $limit = 10, int $offset = null): PromiseInterface
     {
@@ -4033,11 +4001,11 @@ final class MangaApi
      * @param  int $limit (optional, default to 10)
      * @param  int $offset (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaAsyncWithHttpInfo(int $limit = 10, int $offset = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaList';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaList';
         $request = $this->getUserFollowsMangaRequest($limit, $offset);
 
         return $this->client
@@ -4080,19 +4048,19 @@ final class MangaApi
      * @param  int $limit (optional, default to 10)
      * @param  int $offset (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaRequest(int $limit = 10, int $offset = null): Request
     {
         if ($limit !== null && $limit > 100) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsManga, must be smaller than or equal to 100.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsManga, must be smaller than or equal to 100.');
         }
         if ($limit !== null && $limit < 1) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsManga, must be bigger than or equal to 1.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsManga, must be bigger than or equal to 1.');
         }
 
         if ($offset !== null && $offset < 0) {
-            throw new \InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getUserFollowsManga, must be bigger than or equal to 0.');
+            throw new InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getUserFollowsManga, must be bigger than or equal to 0.');
         }
 
 
@@ -4161,7 +4129,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -4181,7 +4149,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -4204,7 +4172,7 @@ final class MangaApi
      * @param  Order2 $order order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return ChapterList|ErrorResponse
      */
     public function getUserFollowsMangaFeed(int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): ModelInterface
@@ -4227,8 +4195,8 @@ final class MangaApi
      * @param  Order2 $order (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\ChapterList|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\ChapterList|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function getUserFollowsMangaFeedWithHttpInfo(int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null)
     {
@@ -4264,32 +4232,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\ChapterList' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ChapterList' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ChapterList', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ChapterList', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\ChapterList';
+            $returnType = '\Mapsred\MangadexSDK\Model\ChapterList';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -4307,7 +4275,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ChapterList',
+                        '\Mapsred\MangadexSDK\Model\ChapterList',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -4315,7 +4283,7 @@ final class MangaApi
                 case 400:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -4338,7 +4306,7 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order2 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaFeedAsync(int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): PromiseInterface
     {
@@ -4364,11 +4332,11 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order2 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaFeedAsyncWithHttpInfo(int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\ChapterList';
+        $returnType = '\Mapsred\MangadexSDK\Model\ChapterList';
         $request = $this->getUserFollowsMangaFeedRequest($limit, $offset, $translated_language, $created_at_since, $updated_at_since, $publish_at_since, $order);
 
         return $this->client
@@ -4416,31 +4384,31 @@ final class MangaApi
      * @param  string $publish_at_since (optional)
      * @param  Order2 $order (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function getUserFollowsMangaFeedRequest(int $limit = 100, int $offset = null, array $translated_language = null, string $created_at_since = null, string $updated_at_since = null, string $publish_at_since = null, $order = null): Request
     {
         if ($limit !== null && $limit > 500) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsMangaFeed, must be smaller than or equal to 500.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsMangaFeed, must be smaller than or equal to 500.');
         }
         if ($limit !== null && $limit < 1) {
-            throw new \InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsMangaFeed, must be bigger than or equal to 1.');
+            throw new InvalidArgumentException('invalid value for "$limit" when calling MangaApi.getUserFollowsMangaFeed, must be bigger than or equal to 1.');
         }
 
         if ($offset !== null && $offset < 0) {
-            throw new \InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getUserFollowsMangaFeed, must be bigger than or equal to 0.');
+            throw new InvalidArgumentException('invalid value for "$offset" when calling MangaApi.getUserFollowsMangaFeed, must be bigger than or equal to 0.');
         }
 
         if ($created_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $created_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"created_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
         if ($updated_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $updated_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"updated_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
         if ($publish_at_since !== null && !preg_match("/^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/", $publish_at_since)) {
-            throw new \InvalidArgumentException("invalid value for \"publish_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
+            throw new InvalidArgumentException("invalid value for \"publish_at_since\" when calling MangaApi.getUserFollowsMangaFeed, must conform to the pattern /^\\d{4}-[0-1]\\d-([0-2]\\d|3[0-1])T([0-1]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$/.");
         }
 
 
@@ -4564,7 +4532,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -4584,7 +4552,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -4602,7 +4570,7 @@ final class MangaApi
      * @param  string[] $translated_language translated_language (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function mangaIdAggregateGet(string $id, array $translated_language = null): InlineResponse200
     {
@@ -4619,8 +4587,8 @@ final class MangaApi
      * @param  string[] $translated_language (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\InlineResponse200, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\InlineResponse200, HTTP status code, HTTP response headers (array of strings)
      */
     public function mangaIdAggregateGetWithHttpInfo(string $id, array $translated_language = null)
     {
@@ -4655,19 +4623,19 @@ final class MangaApi
             }
 
             if ($statusCode === 200) {
-                if ('\MangadexSDK\Model\InlineResponse200' === '\SplFileObject') {
+                if ('\Mapsred\MangadexSDK\Model\InlineResponse200' === '\SplFileObject') {
                     $content = $response->getBody(); //stream goes to serializer
                 } else {
                     $content = (string) $response->getBody();
                 }
                 return [
-                    ObjectSerializer::deserialize($content, '\MangadexSDK\Model\InlineResponse200', []),
+                    ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\InlineResponse200', []),
                     $response->getStatusCode(),
                     $response->getHeaders()
                 ];
             }
 
-            $returnType = '\MangadexSDK\Model\InlineResponse200';
+            $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse200';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -4684,7 +4652,7 @@ final class MangaApi
             if ($e->getCode() === 200) {
                 $data = ObjectSerializer::deserialize(
                     $e->getResponseBody(),
-                    '\MangadexSDK\Model\InlineResponse200',
+                    '\Mapsred\MangadexSDK\Model\InlineResponse200',
                     $e->getResponseHeaders()
                 );
                 $e->setResponseObject($data);
@@ -4701,7 +4669,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string[] $translated_language (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function mangaIdAggregateGetAsync(string $id, array $translated_language = null): PromiseInterface
     {
@@ -4722,11 +4690,11 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string[] $translated_language (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function mangaIdAggregateGetAsyncWithHttpInfo(string $id, array $translated_language = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\InlineResponse200';
+        $returnType = '\Mapsred\MangadexSDK\Model\InlineResponse200';
         $request = $this->mangaIdAggregateGetRequest($id, $translated_language);
 
         return $this->client
@@ -4769,13 +4737,13 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string[] $translated_language (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function mangaIdAggregateGetRequest(string $id, array $translated_language = null): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling mangaIdAggregateGet'
             );
         }
@@ -4842,7 +4810,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -4858,7 +4826,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::GET,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -4875,7 +4843,7 @@ final class MangaApi
      * @param MangaCreate $manga_create The size of the body is limited to 16KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return MangaResponse|ErrorResponse|ErrorResponse
      */
     public function postManga(MangaCreate $manga_create = null): ModelInterface
@@ -4892,8 +4860,8 @@ final class MangaApi
      * @param MangaCreate $manga_create The size of the body is limited to 16KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaResponse|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaResponse|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function postMangaWithHttpInfo(MangaCreate $manga_create = null)
     {
@@ -4929,33 +4897,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
                 case 403:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaResponse';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -4973,7 +4941,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\MangaResponse',
+                        '\Mapsred\MangadexSDK\Model\MangaResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -4982,7 +4950,7 @@ final class MangaApi
                 case 403:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -4999,7 +4967,7 @@ final class MangaApi
      *
      * @param MangaCreate $manga_create The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaAsync(MangaCreate $manga_create = null): PromiseInterface
     {
@@ -5019,11 +4987,11 @@ final class MangaApi
      *
      * @param MangaCreate $manga_create The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaAsyncWithHttpInfo(MangaCreate $manga_create = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaResponse';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
         $request = $this->postMangaRequest($manga_create);
 
         return $this->client
@@ -5065,7 +5033,7 @@ final class MangaApi
      *
      * @param MangaCreate $manga_create The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaRequest(MangaCreate $manga_create = null): Request
     {
@@ -5119,7 +5087,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -5139,7 +5107,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::POST,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -5156,7 +5124,7 @@ final class MangaApi
      * @param  string $id id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse
      */
     public function postMangaIdFollow(string $id): ModelInterface
@@ -5173,8 +5141,8 @@ final class MangaApi
      * @param  string $id (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function postMangaIdFollowWithHttpInfo(string $id)
     {
@@ -5210,32 +5178,32 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -5253,7 +5221,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5261,7 +5229,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5278,7 +5246,7 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdFollowAsync(string $id): PromiseInterface
     {
@@ -5298,11 +5266,11 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdFollowAsyncWithHttpInfo(string $id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->postMangaIdFollowRequest($id);
 
         return $this->client
@@ -5344,13 +5312,13 @@ final class MangaApi
      *
      * @param  string $id (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdFollowRequest(string $id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling postMangaIdFollow'
             );
         }
@@ -5406,7 +5374,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -5426,7 +5394,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::POST,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -5444,7 +5412,7 @@ final class MangaApi
      * @param  string $list_id CustomList ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse|ErrorResponse
      */
     public function postMangaIdListListId(string $id, string $list_id): ModelInterface
@@ -5462,8 +5430,8 @@ final class MangaApi
      * @param  string $list_id CustomList ID (required)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function postMangaIdListListIdWithHttpInfo(string $id, string $list_id)
     {
@@ -5499,33 +5467,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 403:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -5543,7 +5511,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5552,7 +5520,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5570,7 +5538,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdListListIdAsync(string $id, string $list_id): PromiseInterface
     {
@@ -5591,11 +5559,11 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdListListIdAsyncWithHttpInfo(string $id, string $list_id): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->postMangaIdListListIdRequest($id, $list_id);
 
         return $this->client
@@ -5638,19 +5606,19 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param  string $list_id CustomList ID (required)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdListListIdRequest(string $id, string $list_id): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling postMangaIdListListId'
             );
         }
         // verify the required parameter 'list_id' is set
         if ($list_id === null || (is_array($list_id) && count($list_id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $list_id when calling postMangaIdListListId'
             );
         }
@@ -5714,7 +5682,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -5734,7 +5702,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::POST,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -5752,7 +5720,7 @@ final class MangaApi
      * @param UpdateMangaStatus $update_manga_status Using a &#x60;null&#x60; value in &#x60;status&#x60; field will remove the Manga reading status. The size of the body is limited to 2KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return Response|ErrorResponse|ErrorResponse
      */
     public function postMangaIdStatus(string $id, UpdateMangaStatus $update_manga_status = null): ModelInterface
@@ -5770,8 +5738,8 @@ final class MangaApi
      * @param UpdateMangaStatus $update_manga_status Using a &#x60;null&#x60; value in &#x60;status&#x60; field will remove the Manga reading status. The size of the body is limited to 2KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\Response|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\Response|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function postMangaIdStatusWithHttpInfo(string $id, UpdateMangaStatus $update_manga_status = null)
     {
@@ -5807,33 +5775,33 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\Response' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\Response' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\Response', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\Response', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\Response';
+            $returnType = '\Mapsred\MangadexSDK\Model\Response';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -5851,7 +5819,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\Response',
+                        '\Mapsred\MangadexSDK\Model\Response',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5860,7 +5828,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -5878,7 +5846,7 @@ final class MangaApi
      * @param  string $id (required)
      * @param UpdateMangaStatus $update_manga_status Using a &#x60;null&#x60; value in &#x60;status&#x60; field will remove the Manga reading status. The size of the body is limited to 2KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdStatusAsync(string $id, UpdateMangaStatus $update_manga_status = null): PromiseInterface
     {
@@ -5899,11 +5867,11 @@ final class MangaApi
      * @param  string $id (required)
      * @param UpdateMangaStatus $update_manga_status Using a &#x60;null&#x60; value in &#x60;status&#x60; field will remove the Manga reading status. The size of the body is limited to 2KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdStatusAsyncWithHttpInfo(string $id, UpdateMangaStatus $update_manga_status = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\Response';
+        $returnType = '\Mapsred\MangadexSDK\Model\Response';
         $request = $this->postMangaIdStatusRequest($id, $update_manga_status);
 
         return $this->client
@@ -5946,13 +5914,13 @@ final class MangaApi
      * @param  string $id (required)
      * @param UpdateMangaStatus $update_manga_status Using a &#x60;null&#x60; value in &#x60;status&#x60; field will remove the Manga reading status. The size of the body is limited to 2KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function postMangaIdStatusRequest(string $id, UpdateMangaStatus $update_manga_status = null): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling postMangaIdStatus'
             );
         }
@@ -6014,7 +5982,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -6034,7 +6002,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             self::POST,
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -6052,7 +6020,7 @@ final class MangaApi
      * @param MangaEdit $manga_edit The size of the body is limited to 16KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      * @return MangaResponse|ErrorResponse|ErrorResponse|ErrorResponse
      */
     public function putMangaId(string $id, MangaEdit $manga_edit = null): ModelInterface
@@ -6070,8 +6038,8 @@ final class MangaApi
      * @param MangaEdit $manga_edit The size of the body is limited to 16KB. (optional)
      *
      * @throws ApiException on non-2xx response
-     * @throws \InvalidArgumentException
-     * @return array of \MangadexSDK\Model\MangaResponse|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse|\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
+     * @throws InvalidArgumentException
+     * @return array of \Mapsred\MangadexSDK\Model\MangaResponse|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse|\Mapsred\MangadexSDK\Model\ErrorResponse, HTTP status code, HTTP response headers (array of strings)
      */
     public function putMangaIdWithHttpInfo(string $id, MangaEdit $manga_edit = null)
     {
@@ -6107,34 +6075,34 @@ final class MangaApi
 
             switch($statusCode) {
                 case 200:
-                    if ('\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\MangaResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\MangaResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\MangaResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
                 case 400:
                 case 403:
                 case 404:
-                    if ('\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
+                    if ('\Mapsred\MangadexSDK\Model\ErrorResponse' === '\SplFileObject') {
                         $content = $response->getBody(); //stream goes to serializer
                     } else {
                         $content = (string) $response->getBody();
                     }
 
                     return [
-                        ObjectSerializer::deserialize($content, '\MangadexSDK\Model\ErrorResponse', []),
+                        ObjectSerializer::deserialize($content, '\Mapsred\MangadexSDK\Model\ErrorResponse', []),
                         $response->getStatusCode(),
                         $response->getHeaders()
                     ];
             }
 
-            $returnType = '\MangadexSDK\Model\MangaResponse';
+            $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
             if ($returnType === '\SplFileObject') {
                 $content = $response->getBody(); //stream goes to serializer
             } else {
@@ -6152,7 +6120,7 @@ final class MangaApi
                 case 200:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\MangaResponse',
+                        '\Mapsred\MangadexSDK\Model\MangaResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -6162,7 +6130,7 @@ final class MangaApi
                 case 404:
                     $data = ObjectSerializer::deserialize(
                         $e->getResponseBody(),
-                        '\MangadexSDK\Model\ErrorResponse',
+                        '\Mapsred\MangadexSDK\Model\ErrorResponse',
                         $e->getResponseHeaders()
                     );
                     $e->setResponseObject($data);
@@ -6180,7 +6148,7 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param MangaEdit $manga_edit The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function putMangaIdAsync(string $id, MangaEdit $manga_edit = null): PromiseInterface
     {
@@ -6201,11 +6169,11 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param MangaEdit $manga_edit The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function putMangaIdAsyncWithHttpInfo(string $id, MangaEdit $manga_edit = null): PromiseInterface
     {
-        $returnType = '\MangadexSDK\Model\MangaResponse';
+        $returnType = '\Mapsred\MangadexSDK\Model\MangaResponse';
         $request = $this->putMangaIdRequest($id, $manga_edit);
 
         return $this->client
@@ -6248,13 +6216,13 @@ final class MangaApi
      * @param  string $id Manga ID (required)
      * @param MangaEdit $manga_edit The size of the body is limited to 16KB. (optional)
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     public function putMangaIdRequest(string $id, MangaEdit $manga_edit = null): Request
     {
         // verify the required parameter 'id' is set
         if ($id === null || (is_array($id) && count($id) === 0)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'Missing the required parameter $id when calling putMangaId'
             );
         }
@@ -6316,7 +6284,7 @@ final class MangaApi
 
             } else {
                 // for HTTP post (form)
-                $httpBody = build_query($formParams);
+                $httpBody = Query::build($formParams);
             }
         }
 
@@ -6336,7 +6304,7 @@ final class MangaApi
             $headers
         );
 
-        $query = build_query($queryParams);
+        $query = Query::build($queryParams);
         return new Request(
             'PUT',
             $this->config->getHost() . $resourcePath . ($query !== '' ? "?{$query}" : ''),
@@ -6348,7 +6316,7 @@ final class MangaApi
     /**
      * Create http client option
      *
-     * @throws \RuntimeException on file opening failure
+     * @throws RuntimeException on file opening failure
      * @return array of http client options
      */
     protected function createHttpClientOption(): array
@@ -6357,7 +6325,7 @@ final class MangaApi
         if ($this->config->getDebug()) {
             $options[RequestOptions::DEBUG] = fopen($this->config->getDebugFile(), 'a');
             if (!$options[RequestOptions::DEBUG]) {
-                throw new \RuntimeException('Failed to open the debug file: ' . $this->config->getDebugFile());
+                throw new RuntimeException('Failed to open the debug file: ' . $this->config->getDebugFile());
             }
         }
 
