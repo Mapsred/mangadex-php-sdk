@@ -1,7 +1,7 @@
 {
     "name": "mapsred/mangadex-php-sdk",
     "description": "MangaDex PHP SDK",
-    "license": "Apache-2.0",
+    "license": "MIT",
     "authors": [{
         "name": "Maps_red"
     }],
@@ -10,7 +10,7 @@
         "ext-curl": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "guzzlehttp/guzzle": "^6.2"
+        "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^8.0 || ^9.0",
