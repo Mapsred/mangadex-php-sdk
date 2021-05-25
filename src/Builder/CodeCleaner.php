@@ -59,14 +59,17 @@ final class CodeCleaner
     {
         $content = str_replace([
             '\GuzzleHttp\Psr7\build_query',
-            '\GuzzleHttp\Psr7\try_fopen'
+            '\GuzzleHttp\Psr7\try_fopen',
+            '\GuzzleHttp\json_encode',
         ], [
             '\GuzzleHttp\Psr7\Query::build',
-            '\GuzzleHttp\Psr7\Query::tryFopen'
+            '\GuzzleHttp\Psr7\Query::tryFopen',
+            '\GuzzleHttp\Utils::jsonEncode',
         ], $file->getContents());
 
         file_put_contents($file->getPathname(), $content);
     }
+
     private function getFQN(SplFileInfo $file): string
     {
         $class = str_replace(['.php', '/'], ['', '\\'], $file->getRelativePathname());

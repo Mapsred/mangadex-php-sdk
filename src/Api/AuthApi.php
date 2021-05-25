@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -322,7 +322,7 @@ final class AuthApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -581,7 +581,7 @@ final class AuthApi
         // for model (json/xml)
         if (isset($login)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($login));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($login));
             } else {
                 $httpBody = $login;
             }
@@ -601,7 +601,7 @@ final class AuthApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -865,7 +865,7 @@ final class AuthApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1146,7 +1146,7 @@ final class AuthApi
         // for model (json/xml)
         if (isset($refresh_token)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($refresh_token));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($refresh_token));
             } else {
                 $httpBody = $refresh_token;
             }
@@ -1166,7 +1166,7 @@ final class AuthApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)

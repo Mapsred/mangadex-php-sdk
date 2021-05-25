@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -375,7 +375,7 @@ final class AuthorApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -736,7 +736,7 @@ final class AuthorApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1019,7 +1019,7 @@ final class AuthorApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1276,7 +1276,7 @@ final class AuthorApi
         // for model (json/xml)
         if (isset($author_create)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($author_create));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($author_create));
             } else {
                 $httpBody = $author_create;
             }
@@ -1296,7 +1296,7 @@ final class AuthorApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1578,7 +1578,7 @@ final class AuthorApi
         // for model (json/xml)
         if (isset($author_edit)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($author_edit));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($author_edit));
             } else {
                 $httpBody = $author_edit;
             }
@@ -1598,7 +1598,7 @@ final class AuthorApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)

@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -325,7 +325,7 @@ final class LegacyApi
         // for model (json/xml)
         if (isset($mapping_id_body)) {
             if ($headers['Content-Type'] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($mapping_id_body));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($mapping_id_body));
             } else {
                 $httpBody = $mapping_id_body;
             }
@@ -345,7 +345,7 @@ final class LegacyApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers['Content-Type'] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(self::FORM_PARAMS);
+                $httpBody = Utils::jsonEncode(self::FORM_PARAMS);
 
             } else {
                 // for HTTP post (form)

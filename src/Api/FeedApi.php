@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -488,7 +488,7 @@ final class FeedApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers['Content-Type'] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -888,7 +888,7 @@ final class FeedApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers['Content-Type'] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)

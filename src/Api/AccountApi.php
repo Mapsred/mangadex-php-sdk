@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -375,7 +375,7 @@ final class AccountApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -630,7 +630,7 @@ final class AccountApi
         // for model (json/xml)
         if (isset($send_account_activation_code)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($send_account_activation_code));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($send_account_activation_code));
             } else {
                 $httpBody = $send_account_activation_code;
             }
@@ -650,7 +650,7 @@ final class AccountApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -905,7 +905,7 @@ final class AccountApi
         // for model (json/xml)
         if (isset($create_account)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($create_account));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($create_account));
             } else {
                 $httpBody = $create_account;
             }
@@ -925,7 +925,7 @@ final class AccountApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1180,7 +1180,7 @@ final class AccountApi
         // for model (json/xml)
         if (isset($send_account_activation_code)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($send_account_activation_code));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($send_account_activation_code));
             } else {
                 $httpBody = $send_account_activation_code;
             }
@@ -1200,7 +1200,7 @@ final class AccountApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1474,7 +1474,7 @@ final class AccountApi
         // for model (json/xml)
         if (isset($recover_complete_body)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($recover_complete_body));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($recover_complete_body));
             } else {
                 $httpBody = $recover_complete_body;
             }
@@ -1494,7 +1494,7 @@ final class AccountApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)

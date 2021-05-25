@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -379,7 +379,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -666,7 +666,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -953,7 +953,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1294,7 +1294,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1576,7 +1576,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1837,7 +1837,7 @@ final class ScanlationGroupApi
         // for model (json/xml)
         if (isset($create_scanlation_group)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($create_scanlation_group));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($create_scanlation_group));
             } else {
                 $httpBody = $create_scanlation_group;
             }
@@ -1857,7 +1857,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -2144,7 +2144,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -2426,7 +2426,7 @@ final class ScanlationGroupApi
         // for model (json/xml)
         if (isset($scanlation_group_edit)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($scanlation_group_edit));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($scanlation_group_edit));
             } else {
                 $httpBody = $scanlation_group_edit;
             }
@@ -2446,7 +2446,7 @@ final class ScanlationGroupApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)

@@ -5,12 +5,12 @@ namespace Mapsred\MangadexSDK\Api;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use function GuzzleHttp\json_encode;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\MultipartStream;
 use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use Mapsred\MangadexSDK\ApiException;
 use Mapsred\MangadexSDK\Configuration;
@@ -418,7 +418,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -705,7 +705,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1013,7 +1013,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1275,7 +1275,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1540,7 +1540,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -1827,7 +1827,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -2245,7 +2245,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -2530,7 +2530,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -2773,7 +2773,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -3028,7 +3028,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -3272,7 +3272,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -3843,7 +3843,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -4125,7 +4125,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -4528,7 +4528,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -4806,7 +4806,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -5063,7 +5063,7 @@ final class MangaApi
         // for model (json/xml)
         if (isset($manga_create)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($manga_create));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($manga_create));
             } else {
                 $httpBody = $manga_create;
             }
@@ -5083,7 +5083,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -5370,7 +5370,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -5678,7 +5678,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -5958,7 +5958,7 @@ final class MangaApi
         // for model (json/xml)
         if (isset($update_manga_status)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($update_manga_status));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($update_manga_status));
             } else {
                 $httpBody = $update_manga_status;
             }
@@ -5978,7 +5978,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
@@ -6260,7 +6260,7 @@ final class MangaApi
         // for model (json/xml)
         if (isset($manga_edit)) {
             if ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode(ObjectSerializer::sanitizeForSerialization($manga_edit));
+                $httpBody = Utils::jsonEncode(ObjectSerializer::sanitizeForSerialization($manga_edit));
             } else {
                 $httpBody = $manga_edit;
             }
@@ -6280,7 +6280,7 @@ final class MangaApi
                 $httpBody = new MultipartStream($multipartContents);
 
             } elseif ($headers[self::CONTENT_TYPE] === self::APPLICATION_JSON) {
-                $httpBody = json_encode($formParams);
+                $httpBody = Utils::jsonEncode($formParams);
 
             } else {
                 // for HTTP post (form)
